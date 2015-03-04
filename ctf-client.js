@@ -77,14 +77,16 @@ function initCTF () {
 function toCSV (ctfmsg, cols) {
     var csv = "";
     
-	for (var i = 0; i < cols.length; i++) {
-        var val = ctfmsg[cols[i]]
+    cols.forEach(function(token, i) {
+        var val = ctfmsg[token]
         if (val) {
-            csv += val + ",";
-        } else {
+            csv += val;
+        } 
+        
+        if (i != cols.length - 1) {
             csv += ",";
         }
-	}
+    });
 	
 	return csv;
 }
