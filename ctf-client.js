@@ -4,6 +4,7 @@ var net = require('net'),
   winston = require('winston')
   ctf = require('./ctf'),
   config = require('./config')
+  myutil = require('./util')
 
   // global ctf socket stream
   _ctfStream = null,
@@ -81,7 +82,12 @@ function toCSV (ctfmsg, cols) {
   cols.forEach(function(token, i) {
     var val = ctfmsg[token]
     if (val) {
-      csv += val;
+      if (token == 20) {
+        var millis = val.split('.')[1];
+        csv += new Date(parseInt(val)*1000).format("yyyy-mm-dd HH:MM:ss", true) + "." + millis;
+      } else {
+        csv += val;
+      }
     } 
     
     if (i != cols.length - 1) {
