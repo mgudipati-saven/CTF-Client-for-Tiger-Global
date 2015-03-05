@@ -1,15 +1,15 @@
 var net = require('net'),
-    events = require('events'),
-    util = require('util'),
-    winston = require('winston')
-    ctf = require('./ctf'),
-    config = require('./config')
+  events = require('events'),
+  util = require('util'),
+  winston = require('winston')
+  ctf = require('./ctf'),
+  config = require('./config')
 
-    // global ctf socket stream
-    _ctfStream = null,
-    
-    // global ctf client
-    _ctfClient = null;
+  // global ctf socket stream
+  _ctfStream = null,
+  
+  // global ctf client
+  _ctfClient = null;
   
 //
 // Create a new winston logger instance with two tranports: Console, and File
@@ -76,18 +76,18 @@ function initCTF () {
  *    A comma separated value of the given ctf message
  */
 function toCSV (ctfmsg, cols) {
-    var csv = "";
+  var csv = "";
+  
+  cols.forEach(function(token, i) {
+    var val = ctfmsg[token]
+    if (val) {
+      csv += val;
+    } 
     
-    cols.forEach(function(token, i) {
-        var val = ctfmsg[token]
-        if (val) {
-            csv += val;
-        } 
-        
-        if (i != cols.length - 1) {
-            csv += ",";
-        }
-    });
+    if (i != cols.length - 1) {
+      csv += ",";
+    }
+  });
 	
 	return csv;
 }
