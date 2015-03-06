@@ -1,10 +1,15 @@
-var net = require('net'),
+var fs = require('fs'),
+  net = require('net'),
   events = require('events'),
   util = require('util'),
-  winston = require('winston')
+  winston = require('winston'),
+  liner = require('line-by-line'),
   ctf = require('./ctf'),
-  config = require('./config')
-  myutil = require('./util')
+  config = require('./config'),
+  myutil = require('./util'),
+
+  // global data dictionary
+  dataDictionary = {},
 
   // global ctf socket stream
   _ctfStream = null,
@@ -31,9 +36,63 @@ var _logger = new (winston.Logger)({
     })
   ]
 });
-  
+
+// Initialize CTF Token Definitions, also known as data dictionary
+initDataDictionary()
+
 // Initialize CTF Connection
 initCTF();
+
+/*
+ */
+function initDataDictionary () {
+  var linereader = new liner('tokens.dat');
+
+  linereader.on('error', function (err) {
+    _logger.crit("error while loading tokens.dat file into the data dictionary...");
+  }).on('line', function (line) {
+    _logger.debug(line);
+    updateDataDictionary(line);
+  }).on('end', function () {
+    _logger.info("loaded tokens.dat file into the data dictionary...");
+  });
+}
+
+/*
+ */
+function updateDataDictionary(ctfmsg) {
+  var tok = {};
+  
+  ctfmsg.split("|").forEach(function(token) {
+    var tvpair = token.split("=");
+    
+    switch (tvpair[0]) {
+      case '5035': 
+        tok.num = parseInt(tvpair[1]);
+        break;
+        
+      case '5010': 
+        tok.name = tvpair[1]; 
+        break;
+      
+      case '5002': 
+        tok.store = tvpair[1] == '0' ? false : true;
+        break;
+      
+      case '5011': 
+        tok.size = parseInt(tvpair[1]); 
+        break;
+      
+      case '5012': 
+        tok.type = tvpair[1]; 
+        break;
+    }
+  });
+  
+  if (tok.num) {
+    dataDictionary[tok.num] = tok; 
+  }
+}
 
 /*
  */
@@ -79,10 +138,11 @@ function initCTF () {
 function toCSV (ctfmsg, cols) {
   var csv = "";
   
-  cols.forEach(function(token, i) {
-    var val = ctfmsg[token]
+  cols.forEach(function(toknum, i) {
+    var val = ctfmsg[toknum];
     if (val) {
-      if (token == 20) {
+      var token = dataDictionary[toknum];
+      if (token && token.type == "DATETIME") {
         var millis = val.split('.')[1];
         csv += new Date(parseInt(val)*1000).format("yyyy-mm-dd HH:MM:ss", true) + "." + millis;
       } else {
