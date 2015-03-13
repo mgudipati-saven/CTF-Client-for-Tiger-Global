@@ -107,7 +107,7 @@ Client.prototype.deserialize = function (chunk) {
 
       case CTF_FRAME_END: // end of ctf frame
         if (chunk[i] == CTF_FRAME_END) {
-          this.emit('message', toJSON(this._payloadBuffer.toString()));
+          this.emit('message', this._payloadBuffer.toString());
           this._ctfState = CTF_FRAME_START;
         } else {
           console.log("Error: expecting ctf frame end byte, received " + chunk[i]);
@@ -153,28 +153,6 @@ function serialize (str) {
 	ctfmsg[ctfmsg.length-1] = CTF_FRAME_END;
 
 	return ctfmsg;
-}
-
-/**
- * toJSON
- *    Converts a ctf message into JSON object
- * 
- * @param {String} ctfmsg
- *    A ctf message
- *
- * @return {JSON} 
- *    A JSON Object containing parsed ctf message
- */
-function toJSON (ctfmsg) {
-	var tokenPairs = ctfmsg.split("|"),
-	  myJSONObject = {};
-	
-	for (var i = 0; i < tokenPairs.length; i++) {
-		var tokenPair = tokenPairs[i].split("=");
-		myJSONObject['' + tokenPair[0]] = tokenPair[1];
-	}
-	
-	return myJSONObject;
 }
 
 /**

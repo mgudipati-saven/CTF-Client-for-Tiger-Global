@@ -9,7 +9,7 @@ var fs = require('fs'),
   myutil = require('./util'),
 
   // global data dictionary
-  dataDictionary = {},
+  _dataDictionary = {},
 
   // global ctf socket stream
   _ctfStream = null,
@@ -46,9 +46,9 @@ initCTF();
 /*
  */
 function initDataDictionary () {
-  var linereader = new liner('tokens.dat');
+  var readln = new liner('tokens.dat');
 
-  linereader.on('error', function (err) {
+  readln.on('error', function (err) {
     _logger.crit("error while loading tokens.dat file into the data dictionary...");
   }).on('line', function (line) {
     _logger.debug(line);
@@ -61,36 +61,17 @@ function initDataDictionary () {
 /*
  */
 function updateDataDictionary(ctfmsg) {
-  var tok = {};
-  
-  ctfmsg.split("|").forEach(function(token) {
-    var tvpair = token.split("=");
+  var tok = {},
+    json = toJSON(ctfmsg);
+ 
+  tok.num = json['5035'];
+  tok.name = json['5010']; 
+  tok.store = json['5002']
+  tok.size = json['5011']; 
+  tok.type = json['5012']; 
     
-    switch (tvpair[0]) {
-      case '5035': 
-        tok.num = parseInt(tvpair[1]);
-        break;
-        
-      case '5010': 
-        tok.name = tvpair[1]; 
-        break;
-      
-      case '5002': 
-        tok.store = tvpair[1] == '0' ? false : true;
-        break;
-      
-      case '5011': 
-        tok.size = parseInt(tvpair[1]); 
-        break;
-      
-      case '5012': 
-        tok.type = tvpair[1]; 
-        break;
-    }
-  });
-  
   if (tok.num) {
-    dataDictionary[tok.num] = tok; 
+    _dataDictionary[tok.num] = tok; 
   }
 }
 
@@ -105,11 +86,14 @@ function initCTF () {
 
     // register messsage listener
     _ctfClient.on('message', function(msg) {
-      _logger.info("new ctf message received: " + JSON.stringify(msg));
+      _logger.info("new ctf message received: " + msg);
       
-      if (msg['4']) {
-          // quotes...
-          console.log(toCSV(msg, [20, 5, 612, 609, 614, 613]));
+      var json = toJSON(msg);
+      if (json['4']) {
+        // quotes...
+        //console.log(msg);
+        //console.log(json);
+        console.log(toCSV(msg, [20, 5, 612, 609, 614, 613]));
       }
     });
 
@@ -129,25 +113,20 @@ function initCTF () {
  * toCSV
  *    Converts a ctf message into CSV string
  * 
- * @param {JSON} ctfmsg
- *    A ctf message in JSON format
+ * @param {String} ctfmsg
+ *    A ctf message
  *
  * @return {String} 
  *    A comma separated value of the given ctf message
  */
 function toCSV (ctfmsg, cols) {
-  var csv = "";
+  var csv = "",
+    json = toJSON(ctfmsg);
   
   cols.forEach(function(toknum, i) {
-    var val = ctfmsg[toknum];
+    var val = json[toknum];
     if (val) {
-      var token = dataDictionary[toknum];
-      if (token && token.type == "DATETIME") {
-        var millis = val.split('.')[1];
-        csv += new Date(parseInt(val)*1000).format("yyyy-mm-dd HH:MM:ss", true) + "." + millis;
-      } else {
-        csv += val;
-      }
+      csv += val;
     } 
     
     if (i != cols.length - 1) {
@@ -156,4 +135,50 @@ function toCSV (ctfmsg, cols) {
   });
 	
 	return csv;
+}
+
+/**
+ * toJSON
+ *    Converts a ctf message into JSON object
+ * 
+ * @param {String} ctfmsg
+ *    A ctf message
+ *
+ * @return {JSON} 
+ *    A JSON Object containing parsed ctf message
+ */
+function toJSON (ctfmsg) {
+  var json = {};
+  
+  ctfmsg.split("|").forEach(function(token) {
+    var tvpair = token.split("="),
+      toknum = tvpair[0],
+      tokval = tvpair[1];
+    
+    var token = _dataDictionary[toknum];
+    if (token) {
+      switch (token.type) {
+        case "DATETIME":
+          var millis = tvpair[1].split('.')[1];
+          tokval = new Date(parseInt(tvpair[1])*1000).format("yyyy-mm-dd HH:MM:ss", true) + "." + millis;
+          break;
+          
+        case "FLOAT":
+          tokval = parseFloat(tvpair[1]);
+          break;
+          
+        case "INTEGER":
+          tokval = parseInt(tvpair[1]);
+          break;
+
+        case "BOOL":
+          tokval = tvpair[1] == '0' ? false : true;
+          break;
+      }
+    }
+
+		json['' + toknum] = tokval;    
+  });
+
+	return json;
 }
