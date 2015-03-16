@@ -1,2 +1,4 @@
 *.log
 *.dat
+*.csv
+node_modules/*

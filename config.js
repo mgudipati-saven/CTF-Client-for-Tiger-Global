@@ -1,10 +1,20 @@
 var config = {}
 
+config.out = "./hk-l2.csv"
 config.ctf = {}
 config.ctf.host="198.190.11.21"
 config.ctf.port=4012
+config.ctf.userid="tiger"
+config.ctf.password="tiger"
+config.ctf.fields = ['QUOTE.DATETIME', 
+  'SYMBOL.TICKER', 
+  'BID.LEVEL.PRICE', 
+  'BID.LEVEL.SIZE', 
+  'ASK.LEVEL.PRICE', 
+  'ASK.LEVEL.SIZE'
+]
 config.ctf.commands = [
-  "5022=LoginUser|5028=tiger|5029=tiger|5026=1",
+  //"5022=LoginUser|5028=tiger|5029=tiger|5026=1",
   //"5022=LoginUser|5028=pfcanned|5029=cypress|5026=1",
   //"5022=LoginUser|5028=plusserver|5029=plusserver|5026=1",
   //"5022=ListAdministrationInfo|5026=2",

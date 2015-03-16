@@ -1,0 +1,29 @@
+{
+  "name": "HK-L2",
+  "version": "0.8.0",
+  "description": "Hong Kong Level 2 CTF Data Parser",
+  "main": "ctf-client.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mgudipati/CTF-Client-for-Tiger-Global.git"
+  },
+  "keywords": [
+    "ctf",
+    "marketdata",
+    "level2",
+    "marketdepth"
+  ],
+  "author": "Murty Gudipati",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mgudipati/CTF-Client-for-Tiger-Global/issues"
+  },
+  "homepage": "https://github.com/mgudipati/CTF-Client-for-Tiger-Global",
+  "dependencies": {
+    "line-by-line": "^0.1.3",
+    "winston": "^0.9.0"
+  }
+}

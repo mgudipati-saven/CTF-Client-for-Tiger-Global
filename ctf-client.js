@@ -4,6 +4,7 @@ var fs = require('fs'),
   util = require('util'),
   winston = require('winston'),
   liner = require('line-by-line'),
+  csv = require('fast-csv'),
   ctf = require('./ctf'),
   config = require('./config'),
   myutil = require('./util'),
@@ -16,6 +17,10 @@ var fs = require('fs'),
   
   // global ctf client
   _ctfClient = null;
+
+  // global csv stream
+  _csvStream = csv.format({headers: true}),
+  _csvStream.pipe(fs.createWriteStream(config.out));
   
 //
 // Create a new winston logger instance with two tranports: Console, and File
@@ -37,6 +42,7 @@ var _logger = new (winston.Logger)({
   ]
 });
 
+ 
 // Initialize CTF Token Definitions, also known as data dictionary
 initDataDictionary()
 
@@ -64,11 +70,30 @@ function updateDataDictionary(ctfmsg) {
   var tok = {},
     json = toJSON(ctfmsg);
  
-  tok.num = json['5035'];
-  tok.name = json['5010']; 
-  tok.store = json['5002']
-  tok.size = json['5011']; 
-  tok.type = json['5012']; 
+    ctfmsg.split("|").forEach(function(token) {
+      var tvpair = token.split("="),
+        key = tvpair[0],
+        val = tvpair[1];
+    
+        switch (key) {
+        case '5035':
+          tok.num = parseInt(val);
+          break;      
+        case '5010':
+          tok.name = val; 
+          break;
+        case '5012':
+          tok.type = val;
+          break;
+        case '5011':
+          tok.size = parseInt(val);
+          break;
+        case '5002':
+          tok.store = val == '0' ? false : true;
+          break;
+      }
+    });
+ 
     
   if (tok.num) {
     _dataDictionary[tok.num] = tok; 
@@ -89,13 +114,25 @@ function initCTF () {
       _logger.info("new ctf message received: " + msg);
       
       var json = toJSON(msg);
-      if (json['4']) {
+      console.log(msg);
+      console.log(json);
+      if (json['ENUM.SRC.ID']) {
         // quotes...
-        //console.log(msg);
-        //console.log(json);
-        console.log(toCSV(msg, [20, 5, 612, 609, 614, 613]));
+        var res = {}
+        config.ctf.fields.forEach(function(field) {
+          res[field] = json[field];
+        });
+        console.log(res);
+        _logger.debug(msg);
+        //_logger.debug(json);
+        _csvStream.write(res);
+        //console.log(toCSV(msg, [20, 5, 612, 609, 614, 613]));
       }
     });
+
+    // send login command
+    _ctfClient.sendCommand("5022=LoginUser|5028="+config.ctf.userid+"|5029="+config.ctf.password+"|5026=1");
+    _ctfClient.sendCommand("5022=SelectAvailableTokens|5026=2");
 
     // send CTF commands
     config.ctf.commands.forEach(function(cmd) {
@@ -105,6 +142,7 @@ function initCTF () {
 
   _ctfStream.addListener("end", function () {
     _logger.debug("ctf server disconnected...");
+    _csvStream.end();
     //initCTF();
   });
 }
@@ -152,32 +190,33 @@ function toJSON (ctfmsg) {
   
   ctfmsg.split("|").forEach(function(token) {
     var tvpair = token.split("="),
-      toknum = tvpair[0],
-      tokval = tvpair[1];
+      key = tvpair[0],
+      val = tvpair[1];
     
-    var token = _dataDictionary[toknum];
+    var token = _dataDictionary[key];
     if (token) {
+      key = token.name;
       switch (token.type) {
         case "DATETIME":
           var millis = tvpair[1].split('.')[1];
-          tokval = new Date(parseInt(tvpair[1])*1000).format("yyyy-mm-dd HH:MM:ss", true) + "." + millis;
+          val = new Date(parseInt(tvpair[1])*1000).format("yyyy-mm-dd HH:MM:ss", true) + "." + millis;
           break;
           
         case "FLOAT":
-          tokval = parseFloat(tvpair[1]);
+          val = parseFloat(tvpair[1]);
           break;
           
         case "INTEGER":
-          tokval = parseInt(tvpair[1]);
+          val = parseInt(tvpair[1]);
           break;
 
         case "BOOL":
-          tokval = tvpair[1] == '0' ? false : true;
+          val = tvpair[1] == '0' ? false : true;
           break;
       }
     }
 
-		json['' + toknum] = tokval;    
+		json['' + key] = val;    
   });
 
 	return json;
