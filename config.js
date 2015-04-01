@@ -6,7 +6,8 @@ config.ctf.host="198.190.11.21"
 config.ctf.port=4012
 config.ctf.userid="tiger"
 config.ctf.password="tiger"
-config.ctf.fields = ['QUOTE.DATETIME', 
+config.ctf.fields = [
+  'QUOTE.DATETIME', 
   'SYMBOL.TICKER', 
   'BID.LEVEL.PRICE', 
   'BID.LEVEL.SIZE', 
@@ -14,13 +15,28 @@ config.ctf.fields = ['QUOTE.DATETIME',
   'ASK.LEVEL.SIZE'
 ]
 config.ctf.commands = [
+  "5022=LoginUser|5028=tiger|5029=tiger|5026=1",
+  "5022=SelectAvailableTokens|5026=2",
+  "5022=QueryDepth|4=938|5=E:566|5026=3",
+]
+config.news = {}
+config.news.host="198.190.11.31"
+config.news.port=4002
+config.news.userid="tiger"
+config.news.password="tiger"
+config.news.commands = [
+  "5022=LoginUser|5028=tiger|5029=tiger|5026=1",
+  "5022=SelectAvailableTokens|5026=2",
+  "5022=Subscribe|4=13542|5026=3",
+]
+
   //"5022=LoginUser|5028=tiger|5029=tiger|5026=1",
   //"5022=LoginUser|5028=pfcanned|5029=cypress|5026=1",
   //"5022=LoginUser|5028=plusserver|5029=plusserver|5026=1",
   //"5022=ListAdministrationInfo|5026=2",
   //"5022=ListSystemPermission|5026=3",
   //"5022=ListUserPermission|5026=4",
-  "5022=SelectAvailableTokens|5026=5",
+  //"5022=SelectAvailableTokens|5026=5",
   //"5022=ListAvailableTokens|5026=6",
   //"5022=ListEnumeration|5026=7",
   //"5022=ListExchangeTokens|4=941|5026=8",
@@ -44,7 +60,7 @@ config.ctf.commands = [
   //"5022=QuerySnapAndSubscribe|4=941|5=E:TCS.EQ|5026=22",
   //"5022=QueryDepth|4=328|5=IBM|5026=24",
   //"5022=QuerySnapAndSubscribe|4=938|5=E:941|5026=11",
-  "5022=QueryDepth|4=938|5=E:941|5026=11",
+  //"5022=QueryDepth|4=938|5=E:941|5026=11",
   //"5022=QueryDepth|4=938|5026=11",
   //"5022=QueryDepthAndSubscribe|4=328|5=IBM|5026=23",
   //"5022=QueryTasDates|5026=24",
@@ -64,6 +80,5 @@ config.ctf.commands = [
   //"5022=QueryTas|5042=1224669600|5049=1224680400|5040=CORRECTED|4=558|5=IBM|5026=20",
   //"5022=QueryTas|7=|5042=1225310400|5049=1225317600|5040=CORRECTED|4=558|5=IBM|5026=21",
   //"5022=QueryTas|7=|5042=1225704600|5049=1225715400|49168=B|5040=CORRECTED|4=558|5=IBM|5026=22"
-]
 
 module.exports = config;

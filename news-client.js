@@ -37,7 +37,7 @@ var _logger = new (winston.Logger)({
       level: 'info', 
       timestamp: true, 
       json: false, 
-      filename: './ctf-client.log' 
+      filename: './news-client.log' 
     })
   ]
 });
@@ -102,8 +102,8 @@ function updateDataDictionary(ctfmsg) {
 /*
  */
 function initCTF () {
-  _ctfStream = net.createConnection(config.ctf.port, config.ctf.host, function() {
-    _logger.info("established ctf connection with " + config.ctf.host + " on port " + config.ctf.port);
+  _ctfStream = net.createConnection(config.news.port, config.news.host, function() {
+    _logger.info("established ctf connection with " + config.news.host + " on port " + config.news.port);
 
     // CTF Client Object
     _ctfClient = ctf.createClient(_ctfStream);
@@ -114,18 +114,10 @@ function initCTF () {
       
       var json = toJSON(msg);
       _logger.debug("toJSON: " + JSON.stringify(json));
-      if (json['ENUM.SRC.ID']) {
-        // quotes...
-        var res = {}
-        config.ctf.fields.forEach(function(field) {
-          res[field] = json[field];
-        });
-        _csvStream.write(res);
-      }
     });
 
     // send CTF commands
-    config.ctf.commands.forEach(function(cmd) {
+    config.news.commands.forEach(function(cmd) {
       _ctfClient.sendCommand(cmd);
     });
   });
