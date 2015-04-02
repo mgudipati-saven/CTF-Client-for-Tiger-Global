@@ -1,12 +1,13 @@
 var config = {}
 
-config.out = "./hk-l2.csv"
 config.ctf = {}
-config.ctf.host="198.190.11.21"
-config.ctf.port=4012
-config.ctf.userid="tiger"
-config.ctf.password="tiger"
-config.ctf.fields = [
+config.ctf.tokens="./tokens.dat"
+
+config.l2 = {}
+config.l2.ofile = "./hk-l2.csv"
+config.l2.host="198.190.11.21"
+config.l2.port=4012
+config.l2.fields = [
   'QUOTE.DATETIME', 
   'SYMBOL.TICKER', 
   'BID.LEVEL.PRICE', 
@@ -14,23 +15,19 @@ config.ctf.fields = [
   'ASK.LEVEL.PRICE', 
   'ASK.LEVEL.SIZE'
 ]
-config.ctf.commands = [
+config.l2.commands = [
   "5022=LoginUser|5028=tiger|5029=tiger|5026=1",
   "5022=SelectAvailableTokens|5026=2",
-  "5022=QuerySnap|4=922|5=.UTC.TIME.DATE|5026=3",
-  "5022=QueryDepth|4=938|5=E:566|5026=4",
-  //"5022=QueryDepthAndSubscribe|4=938|5=E:533-OL|5026=4",
+  //"5022=QueryDepth|4=938|5=E:566|5026=4",
 ]
+
 config.news = {}
 config.news.host="198.190.11.31"
 config.news.port=4002
-config.news.userid="tiger"
-config.news.password="tiger"
 config.news.commands = [
   "5022=LoginUser|5028=tiger|5029=tiger|5026=1",
-  "5022=SelectAvailableTokens|5026=2",
-  "5022=Subscribe|4=13542|5026=3",
-  "5022=Subscribe|4=922|5=.UTC.TIME.DATE|5026=4"
+  "5022=Subscribe|4=13542|5026=2",
+  "5022=QuerySnap|4=922|5=.UTC.TIME.DATE|5026=3"
 ]
 
   //"5022=LoginUser|5028=tiger|5029=tiger|5026=1",
