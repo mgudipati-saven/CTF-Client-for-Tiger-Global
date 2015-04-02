@@ -5,6 +5,7 @@ var fs = require('fs'),
   winston = require('winston'),
   liner = require('line-by-line'),
   csv = require('fast-csv'),
+  redis = require('redis'),
   ctf = require('./ctf'),
   config = require('./config'),
   myutil = require('./util'),
@@ -21,6 +22,15 @@ var fs = require('fs'),
   // global csv stream
   _csvStream = csv.format({headers: true}),
   _csvStream.pipe(fs.createWriteStream(config.out));
+
+  // redis connection
+  var redisdb = redis.createClient();
+
+  redisdb.on("error", function (err) {
+      console.log("Redis Error " + err);
+  });
+ 
+  var _timeStamp = null;
   
 //
 // Create a new winston logger instance with two tranports: Console, and File
@@ -114,13 +124,15 @@ function initCTF () {
       
       var json = toJSON(msg);
       _logger.debug("toJSON: " + JSON.stringify(json));
-      if (json['ENUM.SRC.ID']) {
-        // quotes...
-        var res = {}
-        config.ctf.fields.forEach(function(field) {
-          res[field] = json[field];
-        });
-        _csvStream.write(res);
+
+      if (json['ENUM.SRC.ID'] == 922) {
+        // time stamp...
+        _timeStamp = json['CURRENT.DATETIME'];
+      }
+
+      if (json['ENUM.SRC.ID'] == 938 && json['SYMBOL.TICKER']) {
+        var key = "OrderBook:" + json['SYMBOL.TICKER'] + ":" + _timeStamp;
+        redisdb.rpush(key, JSON.stringify(json), redis.print);
       }
     });
 
@@ -189,7 +201,7 @@ function toJSON (ctfmsg) {
       switch (token.type) {
         case "DATETIME":
           var millis = tvpair[1].split('.')[1];
-          val = new Date(parseInt(tvpair[1])*1000).format("yyyy-mm-dd HH:MM:ss", true) + "." + millis;
+          //val = new Date(parseInt(tvpair[1])*1000).format("yyyy-mm-dd HH:MM:ss", true) + "." + millis;
           break;
           
         case "FLOAT":

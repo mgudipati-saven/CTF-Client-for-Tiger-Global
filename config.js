@@ -17,7 +17,9 @@ config.ctf.fields = [
 config.ctf.commands = [
   "5022=LoginUser|5028=tiger|5029=tiger|5026=1",
   "5022=SelectAvailableTokens|5026=2",
-  "5022=QueryDepth|4=938|5=E:566|5026=3",
+  "5022=QuerySnap|4=922|5=.UTC.TIME.DATE|5026=3",
+  "5022=QueryDepth|4=938|5=E:566|5026=4",
+  //"5022=QueryDepthAndSubscribe|4=938|5=E:533-OL|5026=4",
 ]
 config.news = {}
 config.news.host="198.190.11.31"
@@ -28,6 +30,7 @@ config.news.commands = [
   "5022=LoginUser|5028=tiger|5029=tiger|5026=1",
   "5022=SelectAvailableTokens|5026=2",
   "5022=Subscribe|4=13542|5026=3",
+  "5022=Subscribe|4=922|5=.UTC.TIME.DATE|5026=4"
 ]
 
   //"5022=LoginUser|5028=tiger|5029=tiger|5026=1",

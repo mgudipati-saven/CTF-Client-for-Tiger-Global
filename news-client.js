@@ -5,6 +5,7 @@ var fs = require('fs'),
   winston = require('winston'),
   liner = require('line-by-line'),
   csv = require('fast-csv'),
+  redis = require('redis'),
   ctf = require('./ctf'),
   config = require('./config'),
   myutil = require('./util'),
@@ -21,6 +22,15 @@ var fs = require('fs'),
   // global csv stream
   _csvStream = csv.format({headers: true}),
   _csvStream.pipe(fs.createWriteStream(config.out));
+  
+  // redis connection
+  var redisdb = redis.createClient();
+
+  redisdb.on("error", function (err) {
+      console.log("Redis Error " + err);
+  });
+  
+  var _timeStamp = null;
   
 //
 // Create a new winston logger instance with two tranports: Console, and File
@@ -113,7 +123,48 @@ function initCTF () {
       _logger.debug("new ctf message received: " + msg);
       
       var json = toJSON(msg);
-      _logger.debug("toJSON: " + JSON.stringify(json));
+      //_logger.debug("toJSON: " + JSON.stringify(json));
+      
+      if (json['ENUM.SRC.ID'] == 922) {
+        // time stamp
+        _timeStamp = json['CURRENT.DATETIME'];
+      }
+      
+      if (json['ENUM.SRC.ID'] == 13542) {
+        if (json['SYMBOL.TICKER'] == "566") {
+          _logger.debug("toJSON: " + JSON.stringify(json));
+          var side = null;
+          if (json['NEWS.HEADLINE'].search(/buy/gi)) {
+            side = "Buy";
+          } else if (json['NEWS.HEADLINE'].search(/sell/gi)) {
+            side = "Sell";
+          }
+          if (side) {
+            var levelarr = json['NEWS.STORY.TEXT'].match(/Level [0-9]+/gi);
+            if (levelarr) {
+              var pricearr = levelarr[0].match(/[0-9]+/gi);
+              if (pricearr) {
+                var level = parseInt(pricearr[0]);
+                var start = json['NEWS.STORY.TEXT'].search(/Best Price/gi);
+                if (start) {
+                  var brokerstr = json['NEWS.STORY.TEXT'].substr(start);
+                  if (brokerstr) {
+                    var brokerq = brokerstr.match(/[0-9]+/g);
+                    console.log("Broker Queue at Price Level " + level + " = " + brokerq);
+                    // BrokerQ:<Ticker Symbol>:<Side>:<Time Stamp>
+                    if (_timeStamp) {
+                      var key = "BrokerQ:" + json['SYMBOL.TICKER'] + ":" + side + ":" + _timeStamp;
+                      var val = {};
+                      val[level] = brokerq;
+                      redisdb.hmset(key, val, redis.print);
+                    }
+                  }
+                }
+              }
+            }      
+          }
+        }
+      }
     });
 
     // send CTF commands
@@ -181,7 +232,7 @@ function toJSON (ctfmsg) {
       switch (token.type) {
         case "DATETIME":
           var millis = tvpair[1].split('.')[1];
-          val = new Date(parseInt(tvpair[1])*1000).format("yyyy-mm-dd HH:MM:ss", true) + "." + millis;
+          //val = new Date(parseInt(tvpair[1])*1000).format("yyyy-mm-dd HH:MM:ss", true) + "." + millis;
           break;
           
         case "FLOAT":
@@ -198,7 +249,7 @@ function toJSON (ctfmsg) {
       }
     }
 
-		json['' + key] = val;    
+		json[key] = val;    
   });
 
 	return json;
