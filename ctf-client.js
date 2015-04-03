@@ -19,19 +19,6 @@ var fs = require('fs'),
   // global ctf client
   _ctfClient = null;
 
-  // global csv stream
-  _csvStream = csv.format({headers: true}),
-  _csvStream.pipe(fs.createWriteStream(config.out));
-
-  // redis connection
-  var redisdb = redis.createClient();
-
-  redisdb.on("error", function (err) {
-      console.log("Redis Error " + err);
-  });
- 
-  var _timeStamp = null;
-  
 //
 // Create a new winston logger instance with two tranports: Console, and File
 //
@@ -39,12 +26,12 @@ var _logger = new (winston.Logger)({
   transports: [
     new (winston.transports.Console)({ 
       levels: winston.config.syslog.levels, 
-      level: 'debug', 
+      level: 'info', 
       timestamp: true
     }),
     new (winston.transports.File)({ 
       levels: winston.config.syslog.levels, 
-      level: 'info', 
+      level: 'debug', 
       timestamp: true, 
       json: false, 
       filename: './ctf-client.log' 
@@ -123,17 +110,7 @@ function initCTF () {
       _logger.debug("new ctf message received: " + msg);
       
       var json = toJSON(msg);
-      _logger.debug("toJSON: " + JSON.stringify(json));
-
-      if (json['ENUM.SRC.ID'] == 922) {
-        // time stamp...
-        _timeStamp = json['CURRENT.DATETIME'];
-      }
-
-      if (json['ENUM.SRC.ID'] == 938 && json['SYMBOL.TICKER']) {
-        var key = "OrderBook:" + json['SYMBOL.TICKER'] + ":" + _timeStamp;
-        redisdb.rpush(key, JSON.stringify(json), redis.print);
-      }
+      _logger.info("toJSON: " + JSON.stringify(json));
     });
 
     // send CTF commands
@@ -145,7 +122,6 @@ function initCTF () {
   _ctfStream.addListener("end", function () {
     _logger.debug("ctf server disconnected...");
     _csvStream.end();
-    //initCTF();
   });
 }
 
@@ -201,7 +177,7 @@ function toJSON (ctfmsg) {
       switch (token.type) {
         case "DATETIME":
           var millis = tvpair[1].split('.')[1];
-          //val = new Date(parseInt(tvpair[1])*1000).format("yyyy-mm-dd HH:MM:ss", true) + "." + millis;
+          val = new Date(parseInt(tvpair[1])*1000).format("yyyy-mm-dd HH:MM:ss", true) + "." + millis;
           break;
           
         case "FLOAT":
@@ -218,7 +194,7 @@ function toJSON (ctfmsg) {
       }
     }
 
-		json['' + key] = val;    
+		json[key] = val;    
   });
 
 	return json;

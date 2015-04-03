@@ -25,6 +25,9 @@ var fs = require('fs')
   // global flag to indicate if a level 2 query to csp is pending
   var _pendingL2Query = false;
   
+  // global query tag for level 2 query
+  var _l2QueryTag = 100;
+  
   // global csv stream
   var _csvStream = csv.format({headers: true});
   _csvStream.pipe(fs.createWriteStream(config.l2.ofile));
@@ -44,12 +47,12 @@ var _logger = new (winston.Logger)({
   transports: [
     new (winston.transports.Console)({ 
       levels: winston.config.syslog.levels, 
-      level: 'debug', 
+      level: 'info', 
       timestamp: true
     }),
     new (winston.transports.File)({ 
       levels: winston.config.syslog.levels, 
-      level: 'info', 
+      level: 'debug', 
       timestamp: true, 
       json: false, 
       filename: './hkl2-client.log' 
@@ -134,20 +137,26 @@ function initL2 (csp) {
       var json = toJSON(msg);
       _logger.debug("toJSON: " + JSON.stringify(json));
 
+      // collect the orders from snapshot response...
       if (json['ENUM.SRC.ID'] == 938 && json['SYMBOL.TICKER'] == "E:566") {
         if (json['ASK.LEVEL.PRICE']) {
           // Sell Side...
           _sellOrders.push(json);
         } else if (json['BID.LEVEL.PRICE']) {
           // Buy Side...
-          _buyOrders.push(json);
+          _buyOrders.unshift(json);
         }
       }
       
-      if (json['ENUM.QUERY.STATUS'] == 0) {
+      if (json['ENUM.QUERY.STATUS'] == 0 && json['QUERY.TAG'] == _l2QueryTag) {
+        // orderbook response done...
         _pendingL2Query = false;
-        console.log("Sell Side Orders: " + JSON.stringify(_sellOrders));
-        console.log("Buy Side Orders: " + JSON.stringify(_buyOrders));
+        _logger.debug("Sell Side Orders: " + JSON.stringify(_sellOrders));
+        _logger.debug("Buy Side Orders: " + JSON.stringify(_buyOrders));
+        
+        // make broker queue copies and clear them for processing...
+        // update orderbook with broker queue information...
+        // reset orderbook...
         var q = _buyBrokerQ.splice(0, _buyBrokerQ.length);
         updateBookWithBrokerQ(_buyOrders, q);
         _buyOrders = [];
@@ -169,12 +178,19 @@ function initL2 (csp) {
   });
 }
 
+/*
+ * Update orderbook with broker queue information and write to a CSV file
+*/
 function updateBookWithBrokerQ(book, q) {
   q.forEach(function(item) {
     if (item.level <= book.length) {
-      var order = book[level];
+      var order = book[item.level];
       order['MM.ID.INT'] = item.q;
-      console.log(order);
+      var res = {};
+      config.l2.fields.forEach(function(field) {
+        res[field] = order[field];
+      });
+      _csvStream.write(res);
     }
   });
 }
@@ -190,37 +206,46 @@ function initNews (csp) {
 
     // register messsage listener
     _newsClient.on('message', function(msg) {
-      _logger.debug("new ctf message received: " + msg);
+      //_logger.debug("new ctf message received: " + msg);
       
       var json = toJSON(msg);
-      _logger.debug("toJSON: " + JSON.stringify(json));
+      //_logger.debug("toJSON: " + JSON.stringify(json));
 
       if (json['ENUM.SRC.ID'] == 13542) {
-        // news message...
+        // news message, collect broker queues...
         if (json['SYMBOL.TICKER'] == "566") {
           _logger.debug("toJSON: " + JSON.stringify(json));
+          //"NEWS.STORY.TEXT":"&#13; Broker Queue at Level 0 from Best Price 5980 6386"
           var levelarr = json['NEWS.STORY.TEXT'].match(/Level [0-9]+/gi);
           if (levelarr) {
+            // Level 0,
             var pricearr = levelarr[0].match(/[0-9]+/gi);
             if (pricearr) {
+              // 0,
               var level = parseInt(pricearr[0]);
               var start = json['NEWS.STORY.TEXT'].search(/Best Price/gi);
               if (start) {
                 var brokerstr = json['NEWS.STORY.TEXT'].substr(start);
                 if (brokerstr) {
+                  // Best Price 5980 6386,
                   var brokerq = brokerstr.match(/[0-9]+/g);
-                  console.log("Broker Queue at Price Level " + level + " = " + brokerq);
                   var item = {};
                   item.level = level;
                   item.q = brokerq;
-                  if (json['NEWS.HEADLINE'].search(/buy/gi)) {
+                  //"NEWS.HEADLINE":"Broker Queue for securityCode 566 Sell Side"
+                  if (json['NEWS.HEADLINE'].search(/buy/gi) != -1) {
+                    // Buy side...
+                    _logger.debug("Buy Side Broker Queue at Level " + item.level + " = " + item.q);
                     _buyBrokerQ.push(item);
-                  } else if (json['NEWS.HEADLINE'].search(/sell/gi)) {
+                  } else if (json['NEWS.HEADLINE'].search(/sell/gi) != -1) {
+                    // Sell side...
+                    _logger.debug("Sell Side Broker Queue at Level " + item.level + " = " + item.q);
                     _sellBrokerQ.push(item);
                   }
                   
+                  // request level 2 snapshot, if there is no pending query already...
                   if (!_pendingL2Query) {
-                    _l2Client.sendCommand("5022=QueryDepth|4=938|5=E:566|5026=4");
+                    _l2Client.sendCommand("5022=QueryDepth|4=938|5=E:566|5026="+_l2QueryTag);
                     _pendingL2Query = true;
                   }
                 }
@@ -295,7 +320,7 @@ function toJSON (ctfmsg) {
       switch (token.type) {
         case "DATETIME":
           var millis = tvpair[1].split('.')[1];
-          //val = new Date(parseInt(tvpair[1])*1000).format("yyyy-mm-dd HH:MM:ss", true) + "." + millis;
+          val = new Date(parseInt(tvpair[1])*1000).format("yyyy-mm-dd HH:MM:ss", true) + "." + millis;
           break;
           
         case "FLOAT":
