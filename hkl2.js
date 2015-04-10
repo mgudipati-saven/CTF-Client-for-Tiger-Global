@@ -101,6 +101,9 @@ function initL2 (csp) {
             _buyOrders[sym].unshift(json);
           }
         }
+      } else if (json['ENUM.SRC.ID'] == 922) {
+        // ctf network timestamp in UTC format
+        _ctfTimeStamp = json;
       }
       
       if (json['ENUM.QUERY.STATUS'] == 0) {
@@ -157,6 +160,7 @@ function updateBookWithBrokerQ(book, q) {
         if (order) {
           order['MM.ID.INT'] = item.q;
           order['PRICE.LEVEL'] = item.level;
+          order['CURRENT.DATETIME'] = _ctfTimeStamp != null ? _ctfTimeStamp['CURRENT.DATETIME'] : order['QUOTE.DATETIME'];
           var res = {};
           config.l2.fields.forEach(function(field) {
             res[field] = order[field];
@@ -228,6 +232,7 @@ function initNews (csp) {
                     // request level 2 snapshot, if there is no pending query already...
                     if (getPendingQueryTagForSymbol(sym) == null) {
                       var qtag = getNextQueryTag();
+                      _l2Client.sendCommand("5022=QuerySnap|4=922|5=.UTC.TIME.DATE|5026=100");
                       _l2Client.sendCommand("5022=QueryDepth|4=938|5=" + sym + "|5026=" + qtag);
                       setPendingQueryTagForSymbol(sym, qtag);
                     }

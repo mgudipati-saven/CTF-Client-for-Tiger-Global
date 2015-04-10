@@ -5,7 +5,7 @@ config.l2.ofile = "./hkl2.csv"
 config.l2.host="198.190.11.21"
 config.l2.port=4012
 config.l2.fields = [
-  'QUOTE.DATETIME', 
+  'CURRENT.DATETIME', 
   'SYMBOL.TICKER',
   'PRICE.LEVEL',
   'BID.LEVEL.PRICE', 
@@ -40,7 +40,7 @@ config.ctf.commands = [
   //"5022=ListAdministrationInfo|5026=2",
   //"5022=ListSystemPermission|5026=3",
   //"5022=ListUserPermission|5026=4",
-  //"5022=SelectAvailableTokens|5026=5",
+  "5022=SelectAvailableTokens|5026=5",
   //"5022=ListAvailableTokens|5026=6",
   //"5022=ListEnumeration|5026=7",
   //"5022=ListExchangeTokens|4=941|5026=8",
@@ -50,8 +50,8 @@ config.ctf.commands = [
   //"5022=QuerySnap|4=1057|5=IBM|5026=11",
   //"5022=QuerySnap|4=941|5026=11",
   //"5022=QuerySnap|4=938|5=E:941|5026=11",
-  //"5022=QuerySnap|4=922|5=.UTC.TIME.DATE|5026=11",
-  "5022=Subscribe|4=13542|5026=12",
+  "5022=QuerySnap|4=922|5=.UTC.TIME.DATE|5026=11",
+  //"5022=Subscribe|4=13542|5026=12",
   //"5022=Unsubscribe|5026=13",
   //"5022=SelectOutput|5018=ON|5026=14",
   //"5022=ListSplitExchanges|5026=15",
