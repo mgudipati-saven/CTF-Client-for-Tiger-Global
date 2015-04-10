@@ -5,19 +5,16 @@ var csv = require("fast-csv")
 var _mmidmap = {};
 
 var _csvStream = csv.format({headers: true});
-  _csvStream.pipe(fs.createWriteStream("hk-l2-mm.csv"));
+  _csvStream.pipe(fs.createWriteStream("hkl2wmm.csv"));
 
 csv
  .fromPath("mmidmap.csv", {headers : true})
  .on("data", function(data){
-   //console.log(data['MM.ID.INT'] + " => " + data['MM.ID']);
    _mmidmap[parseInt(data['MM.ID.INT'])] = data['MM.ID'];
  })
  .on("end", function(){
-   console.log("done");
-   console.log(_mmidmap);
     csv
-     .fromPath("hk-l2.csv", {headers : true})
+     .fromPath("hkl2.csv", {headers : true})
      .on("data", function(data){
        var arr = data['MM.ID.INT'].split(',');
        arr.forEach(function(id) {

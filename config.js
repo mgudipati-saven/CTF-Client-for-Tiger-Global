@@ -1,16 +1,19 @@
 var config = {}
 
 config.l2 = {}
-config.l2.ofile = "./hk-l2.csv"
+config.l2.ofile = "./hkl2.csv"
 config.l2.host="198.190.11.21"
 config.l2.port=4012
 config.l2.fields = [
   'QUOTE.DATETIME', 
+  'SYMBOL.TICKER',
+  'PRICE.LEVEL',
   'BID.LEVEL.PRICE', 
-  'BID.LEVEL.SIZE', 
-  'ASK.LEVEL.PRICE', 
-  'ASK.LEVEL.SIZE',
+  'ASK.LEVEL.PRICE',
   'MM.ID.INT'
+]
+config.l2.symbols = [
+  '566'
 ]
 config.l2.commands = [
   "5022=LoginUser|5028=tiger|5029=tiger|5026=1",
@@ -37,7 +40,7 @@ config.ctf.commands = [
   //"5022=ListAdministrationInfo|5026=2",
   //"5022=ListSystemPermission|5026=3",
   //"5022=ListUserPermission|5026=4",
-  "5022=SelectAvailableTokens|5026=5",
+  //"5022=SelectAvailableTokens|5026=5",
   //"5022=ListAvailableTokens|5026=6",
   //"5022=ListEnumeration|5026=7",
   //"5022=ListExchangeTokens|4=941|5026=8",
@@ -62,7 +65,8 @@ config.ctf.commands = [
   //"5022=QuerySnapAndSubscribe|4=941|5=E:TCS.EQ|5026=22",
   //"5022=QueryDepth|4=328|5=IBM|5026=24",
   //"5022=QuerySnapAndSubscribe|4=938|5=E:941|5026=11",
-  //"5022=QueryDepth|4=938|5=E:941|5026=11",
+  //"5022=QueryDepth|4=938|5=E:560|5026=11",
+  //"5022=QueryDepth|4=938|5=E:566|5026=11",
   //"5022=QueryDepth|4=938|5026=11",
   //"5022=QueryDepthAndSubscribe|4=328|5=IBM|5026=23",
   //"5022=QueryTasDates|5026=24",
