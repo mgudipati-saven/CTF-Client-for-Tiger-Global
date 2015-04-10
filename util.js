@@ -1,5 +1,6 @@
-var	path = require('path'),
-	fs = require('fs');
+var	path = require('path')
+  , liner = require('line-by-line')
+	, fs = require('fs');
 
 /**
  * Function to convert a number into 32-bit buffer
@@ -435,3 +436,99 @@ String.prototype.printf = function() {
   newArguments.unshift( String( this ) );
   return sprintf.apply( undefined, newArguments );
 }
+
+/*
+ */
+var toCTFToken = exports.toCTFToken = function (ctfmsg) {
+  var tok = {};
+ 
+    ctfmsg.split("|").forEach(function(token) {
+      var tvpair = token.split("="),
+        key = tvpair[0],
+        val = tvpair[1];
+    
+        switch (key) {
+        case '5035':
+          tok.num = parseInt(val);
+          break;      
+        case '5010':
+          tok.name = val; 
+          break;
+        case '5012':
+          tok.type = val;
+          break;
+        case '5011':
+          tok.size = parseInt(val);
+          break;
+        case '5002':
+          tok.store = val == '0' ? false : true;
+          break;
+      }
+    });
+    
+    return tok;
+}
+
+/*
+ */
+exports.loadCTFTokens = function (file) {
+  dict = {};
+
+  var readln = new liner(file);
+  readln.on('line', function (line) {
+    var tok = toCTFToken(line);
+    if (tok) {
+      dict[tok.num] = tok;
+    }
+  });
+  
+  return dict;
+}
+
+/**
+ * toJSON
+ *    Converts a ctf message into JSON object
+ * 
+ * @param {String} ctfmsg
+ *    A ctf message
+ *
+ * @return {JSON} 
+ *    A JSON Object containing parsed ctf message
+ */
+exports.toJSON = function (ctfmsg, dict) {
+  var json = {};
+  
+  ctfmsg.split("|").forEach(function(token) {
+    var tvpair = token.split("="),
+      key = tvpair[0],
+      val = tvpair[1];
+    
+    var token = dict[key];
+    if (token) {
+      key = token.name;
+      switch (token.type) {
+        case "DATETIME":
+          var millis = tvpair[1].split('.')[1];
+          val = new Date(parseInt(tvpair[1])*1000).format("yyyy-mm-dd HH:MM:ss", true) + "." + millis;
+          break;
+          
+        case "FLOAT":
+          val = parseFloat(tvpair[1]);
+          break;
+          
+        case "INTEGER":
+          val = parseInt(tvpair[1]);
+          break;
+
+        case "BOOL":
+          val = tvpair[1] == '0' ? false : true;
+          break;
+      }
+    }
+
+		json[key] = val;    
+  });
+
+	return json;
+}
+
