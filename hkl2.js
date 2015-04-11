@@ -215,18 +215,10 @@ function initNews (csp) {
                     //"NEWS.HEADLINE":"Broker Queue for securityCode 566 Sell Side"
                     if (json['NEWS.HEADLINE'].search(/buy/gi) != -1) {
                       // Buy side...
-                      _logger.debug("Buy Side Broker Queue at Level " + item.level + " = " + item.q);
-                      if (typeof _buyBrokerQ[sym] === 'undefined') {
-                        _buyBrokerQ[sym] = [];
-                      }
-                      _buyBrokerQ[sym].push(item);
+                      updateBrokerQForSym(_buyBrokerQ, sym, item);
                     } else if (json['NEWS.HEADLINE'].search(/sell/gi) != -1) {
                       // Sell side...
-                      _logger.debug("Sell Side Broker Queue at Level " + item.level + " = " + item.q);
-                      if (typeof _sellBrokerQ[sym] === 'undefined') {
-                        _sellBrokerQ[sym] = [];
-                      }
-                      _sellBrokerQ[sym].push(item);
+                      updateBrokerQForSym(_sellBrokerQ, sym, item);
                     }
                   
                     // request level 2 snapshot, if there is no pending query already...
@@ -299,4 +291,13 @@ function deleteQueryTagForSymbol(sym) {
   if (_pendingQueryTag[sym]) {
     delete _pendingQueryTag[sym];
   }
+}
+
+/*
+ */
+function updateBrokerQForSym(q, sym, item) {
+  if (typeof q[sym] === 'undefined') {
+    q[sym] = [];
+  }
+  q[sym].push(item);
 }

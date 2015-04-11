@@ -33,7 +33,7 @@ var _logger = new (winston.Logger)({
       level: 'debug', 
       timestamp: true, 
       json: false, 
-      filename: './ctf-client.log' 
+      filename: './ctfclient.log' 
     })
   ]
 });

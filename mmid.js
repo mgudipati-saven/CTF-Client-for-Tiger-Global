@@ -5,7 +5,7 @@ var csv = require("fast-csv")
 var _mmidmap = {};
 
 var _csvStream = csv.format({headers: true});
-  _csvStream.pipe(fs.createWriteStream("hkl2wmm.csv"));
+  _csvStream.pipe(fs.createWriteStream("hkl2mm.csv"));
 
 csv
  .fromPath("mmidmap.csv", {headers : true})
@@ -16,13 +16,26 @@ csv
     csv
      .fromPath("hkl2.csv", {headers : true})
      .on("data", function(data){
+       var newdata = {};
+       newdata['AsOfDate'] = data['QUOTE.DATETIME'].split(' ')[0];
+       newdata['AsOfTime'] = data['QUOTE.DATETIME'].split(' ')[1];
+       newdata['Ticker'] = data['SYMBOL.TICKER'].slice(2) + " HK";
+       newdata['Serial#'] = data['PRICE.LEVEL'];
        var arr = data['MM.ID.INT'].split(',');
        arr.forEach(function(id) {
-         console.log(id + " => " + _mmidmap[id]);
          if (_mmidmap[id]) {
-           data['MM.ID.INT'] = id;
-           data['MM.ID'] = _mmidmap[id];
-           _csvStream.write(data);
+           if (data['BID.LEVEL.PRICE']) {
+             newdata['Bid MMKR'] = _mmidmap[id];
+             newdata['Bid Price'] = data['BID.LEVEL.PRICE'];
+             newdata['Ask MMKR'] = null;
+             newdata['Ask Price'] = null;
+           } else if (data['ASK.LEVEL.PRICE']) {
+             newdata['Bid MMKR'] = null;
+             newdata['Bid Price'] = null;
+             newdata['Ask MMKR'] = _mmidmap[id];
+             newdata['Ask Price'] = data['ASK.LEVEL.PRICE'];
+           }
+           _csvStream.write(newdata);
          }
        });
      })
