@@ -4,6 +4,9 @@ config.l2 = {}
 config.l2.ofile = "./hkl2.csv"
 config.l2.host="198.190.11.21"
 config.l2.port=4012
+config.l2.user="tiger"
+config.l2.password="tiger"
+config.l2.interval=10
 config.l2.fields = [
   'CURRENT.DATETIME', 
   'SYMBOL.TICKER',
@@ -16,7 +19,6 @@ config.l2.symbols = [
   '566'
 ]
 config.l2.commands = [
-  "5022=LoginUser|5028=tiger|5029=tiger|5026=1",
   "5022=SelectAvailableTokens|5026=2",
   //"5022=QueryDepth|4=938|5=E:566|5026=4",
 ]
@@ -66,7 +68,7 @@ config.ctf.commands = [
   //"5022=QueryDepth|4=328|5=IBM|5026=24",
   //"5022=QuerySnapAndSubscribe|4=938|5=E:941|5026=11",
   //"5022=QueryDepth|4=938|5=E:560|5026=11",
-  //"5022=QueryDepth|4=938|5=E:566|5026=11",
+  "5022=QueryDepth|4=938|5=E:566|5026=11",
   //"5022=QueryDepth|4=938|5026=11",
   //"5022=QueryDepthAndSubscribe|4=328|5=IBM|5026=23",
   //"5022=QueryTasDates|5026=24",

@@ -23,6 +23,7 @@ var fs = require('fs')
   
   // global query tag queue for pending level 2 responses, ticker symbol => query tag
   var _pendingQueryTag = {}
+    , _loginQueryTag = 999
     , _nextQueryTag = 1000;
   
   // global csv stream
@@ -84,7 +85,7 @@ function initL2 (csp) {
       _logger.debug("toJSON: " + JSON.stringify(json));
 
       if (json['ENUM.SRC.ID'] == 938) {
-        // collect the orders from snapshot response...
+        // collect the orders from market depth snapshot response...
         var sym = json['SYMBOL.TICKER'];
         if (sym) {
           if (json['ASK.LEVEL.PRICE']) {
@@ -102,45 +103,49 @@ function initL2 (csp) {
           }
         }
       } else if (json['ENUM.SRC.ID'] == 922) {
-        // ctf network timestamp in UTC format
+        // ctf timestamp, save it...
         _ctfTimeStamp = json;
       }
       
       if (json['ENUM.QUERY.STATUS'] == 0) {
         var qtag = json['QUERY.TAG'];
         
-        // check if the query tag belongs to a pending level 2 request...
-        var sym = getSymbolForPendingQueryTag(qtag);
-        if (sym) {
-          // orderbook response done...
-          _logger.debug("Sell Side Orders: " + JSON.stringify(_sellOrders[sym]));
-          _logger.debug("Buy Side Orders: " + JSON.stringify(_buyOrders[sym]));
+        if (qtag == _loginQueryTag) {
+          // successful login, start the timer to request level 2 data every interval seconds...
+          setInterval(requestL2Data, 1000 * csp.interval);
+          
+          // send CTF commands
+          csp.commands.forEach(function(cmd) {
+            _l2Client.sendCommand(cmd);
+          });
+        } else {
+          // check if the query tag belongs to a pending level 2 request...
+          var sym = getSymbolForPendingQueryTag(qtag);
+          if (sym) {
+            // orderbook response done...
+            _logger.debug("Sell Side Orders: " + JSON.stringify(_sellOrders[sym]));
+            _logger.debug("Buy Side Orders: " + JSON.stringify(_buyOrders[sym]));
+
+            // purge query tag for this symbol...
+            deleteQueryTagForSymbol(sym);
         
-          // make broker queue copies and clear them for processing...
-          // update orderbook with broker queue information...
-          // reset orderbook...
-          if (_buyBrokerQ[sym]) {
-            var q = _buyBrokerQ[sym].splice(0, _buyBrokerQ[sym].length);
-            updateBookWithBrokerQ(_buyOrders[sym], q);
-            _buyOrders[sym] = [];
-          }
+            // update orderbook with broker queue information...
+            if (_buyBrokerQ[sym]) {
+              updateBookWithBrokerQ(_buyOrders[sym], _buyBrokerQ[sym]);
+              printBook(_buyOrders[sym]);
+            }
           
-          if (_sellBrokerQ[sym]) {
-            q = _sellBrokerQ[sym].splice(0, _sellBrokerQ[sym].length);
-            updateBookWithBrokerQ(_sellOrders[sym], q);
-            _sellOrders[sym] = [];
+            if (_sellBrokerQ[sym]) {
+              updateBookWithBrokerQ(_sellOrders[sym], _sellBrokerQ[sym]);
+              printBook(_sellOrders[sym]);
+            }
           }
-          
-          // purge query tag for this symbol...
-          deleteQueryTagForSymbol(sym);
         }
       }
     });
-
-    // send CTF commands
-    csp.commands.forEach(function(cmd) {
-      _l2Client.sendCommand(cmd);
-    });
+    
+    // send login command...
+    _l2Client.sendCommand("5022=LoginUser|5028=" + csp.user + "|5029=" + csp.password + "|5026=" + _loginQueryTag);
   });
 
   ctfStream.addListener("end", function () {
@@ -154,22 +159,26 @@ function initL2 (csp) {
 */
 function updateBookWithBrokerQ(book, q) {
   if (book && q) {
-    q.forEach(function(item) {
-      if (item.level <= book.length) {
-        var order = book[item.level];
-        if (order) {
-          order['MM.ID.INT'] = item.q;
-          order['PRICE.LEVEL'] = item.level;
-          order['CURRENT.DATETIME'] = _ctfTimeStamp != null ? _ctfTimeStamp['CURRENT.DATETIME'] : order['QUOTE.DATETIME'];
-          var res = {};
-          config.l2.fields.forEach(function(field) {
-            res[field] = order[field];
-          });
-          _csvStream.write(res);
-        }
-      }
+    var newq = q.splice(0, q.length);
+    
+    book.forEach(function(order, level) {
+      order['PRICE.LEVEL'] = level;
+      order['MM.ID.INT'] = newq[level];
+      order['CURRENT.DATETIME'] = _ctfTimeStamp != null ? _ctfTimeStamp['CURRENT.DATETIME'] : order['QUOTE.DATETIME'];
     });
   }
+}
+
+/*
+ */
+function printBook(book) {
+  book.forEach(function(order) {
+    var res = {};
+    config.l2.fields.forEach(function(field) {
+      res[field] = order[field];
+    });
+    _csvStream.write(res);
+  });
 }
 
 /*
@@ -219,14 +228,6 @@ function initNews (csp) {
                     } else if (json['NEWS.HEADLINE'].search(/sell/gi) != -1) {
                       // Sell side...
                       updateBrokerQForSym(_sellBrokerQ, sym, item);
-                    }
-                  
-                    // request level 2 snapshot, if there is no pending query already...
-                    if (getPendingQueryTagForSymbol(sym) == null) {
-                      var qtag = getNextQueryTag();
-                      _l2Client.sendCommand("5022=QuerySnap|4=922|5=.UTC.TIME.DATE|5026=100");
-                      _l2Client.sendCommand("5022=QueryDepth|4=938|5=" + sym + "|5026=" + qtag);
-                      setPendingQueryTagForSymbol(sym, qtag);
                     }
                   }
                 }
@@ -297,7 +298,25 @@ function deleteQueryTagForSymbol(sym) {
  */
 function updateBrokerQForSym(q, sym, item) {
   if (typeof q[sym] === 'undefined') {
-    q[sym] = [];
+    q[sym] = {};
   }
-  q[sym].push(item);
+  q[sym][item.level] = item.q;
+}
+
+/*
+ */
+function requestL2Data() {
+  _l2Client.sendCommand("5022=QuerySnap|4=922|5=.UTC.TIME.DATE|5026=" + getNextQueryTag());
+  config.l2.symbols.forEach(function(sym) {
+    // request level 2 snapshot, if there is no pending query for this symbol...
+    if (getPendingQueryTagForSymbol(sym) == null) {
+      var qtag = getNextQueryTag();
+      _l2Client.sendCommand("5022=QueryDepth|4=938|5=" + sym + "|5026=" + qtag);
+      setPendingQueryTagForSymbol(sym, qtag);
+      
+      // clear the books...
+      _buyOrders[sym] = [];
+      _sellOrders[sym] = [];
+    }
+  });
 }
