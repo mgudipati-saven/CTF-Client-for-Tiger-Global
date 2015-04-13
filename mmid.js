@@ -17,11 +17,11 @@ csv
      .fromPath("hkl2.csv", {headers : true})
      .on("data", function(data){
        var newdata = {};
-       newdata['AsOfDate'] = data['QUOTE.DATETIME'].split(' ')[0];
-       newdata['AsOfTime'] = data['QUOTE.DATETIME'].split(' ')[1];
+       newdata['AsOfDate'] = data['CURRENT.DATETIME'].split(' ')[0];
+       newdata['AsOfTime'] = data['CURRENT.DATETIME'].split(' ')[1];
        newdata['Ticker'] = data['SYMBOL.TICKER'].slice(2) + " HK";
        newdata['Serial#'] = data['PRICE.LEVEL'];
-       var arr = data['MM.ID.INT'].split(',');
+       var arr = data['MM.ID.INT'].split(',').filter(function(item, i, ar){ return ar.indexOf(item) === i; });
        arr.forEach(function(id) {
          if (_mmidmap[id]) {
            if (data['BID.LEVEL.PRICE']) {
