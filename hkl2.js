@@ -159,11 +159,9 @@ function initL2 (csp) {
 */
 function updateBookWithBrokerQ(book, q) {
   if (book && q) {
-    var newq = q.splice(0, q.length);
-    
     book.forEach(function(order, level) {
       order['PRICE.LEVEL'] = level;
-      order['MM.ID.INT'] = newq[level];
+      order['MM.ID.INT'] = q[level];
       order['CURRENT.DATETIME'] = _ctfTimeStamp != null ? _ctfTimeStamp['CURRENT.DATETIME'] : order['QUOTE.DATETIME'];
     });
   }
@@ -309,6 +307,7 @@ function requestL2Data() {
   _l2Client.sendCommand("5022=QuerySnap|4=922|5=.UTC.TIME.DATE|5026=" + getNextQueryTag());
   config.l2.symbols.forEach(function(sym) {
     // request level 2 snapshot, if there is no pending query for this symbol...
+    sym = "E:" + sym;
     if (getPendingQueryTagForSymbol(sym) == null) {
       var qtag = getNextQueryTag();
       _l2Client.sendCommand("5022=QueryDepth|4=938|5=" + sym + "|5026=" + qtag);
